@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Masaniello</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Outfit:wght@400;500;600&display=swap");
+  :root {
+    --bg: #0b0a08;
+    --elev: #17140f;
+    --sunken: #0f0d0a;
+    --hover: #1e1a12;
+    --fg: #ede7da;
+    --muted: #8b8377;
+    --subtle: #6a6358;
+    --line: #2c2820;
+    --accent: #ede6d6;
+    --accent-fg: #1b1710;
+    --win: #5fae7c;
+    --win-dim: #16261d;
+    --loss: #c1584a;
+    --loss-dim: #2a1815;
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Outfit, system-ui, sans-serif;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font-family: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; opacity: 0.4; }
+  .app { max-width: 520px; margin: 0 auto; padding: calc(12px + var(--safe-top)) 16px calc(28px + var(--safe-bot)); }
+  .serif { font-family: Fraunces, serif; }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+  h1 { font-family: Fraunces, serif; font-size: 28px; font-weight: 600; margin: 0; letter-spacing: -0.03em; }
+  .sub { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .card { background: var(--elev); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 16px; }
+  h2 { font-family: Fraunces, serif; font-size: 18px; font-weight: 600; margin: 0; }
+  .pill { background: var(--accent); color: var(--accent-fg); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; padding: 5px 11px; border-radius: 999px; text-transform: uppercase; }
+  .pill.live { background: var(--win-dim); color: var(--win); }
+  .pill.lost, .pill.bust { background: var(--loss-dim); color: var(--loss); }
+  label { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  input[type="text"], input[type="number"], input[type="search"] {
+    width: 100%; height: 44px; background: var(--sunken); border: 1px solid var(--line);
+    color: var(--fg); border-radius: 8px; padding: 0 12px; font-size: 15px; outline: none;
+  }
+  input:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+  .chip {
+    height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
+    background: transparent; color: var(--muted); font-size: 13px;
+  }
+  .chip.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .stat .k { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-family: Fraunces, serif; font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .stat .h { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+  .green { color: var(--win); }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 46px; border: 0; border-radius: 10px; font-size: 15px; font-weight: 600;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-fg); }
+  .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+  .btn-win { background: var(--win); color: #0b0a08; }
+  .btn-loss { background: var(--loss); color: #0b0a08; }
+  .row-btns { display: flex; gap: 8px; margin-top: 10px; }
+  .row-btns .btn { flex: 1; }
+  .err { color: var(--loss); font-size: 12px; margin-top: 8px; display: none; }
+  .note { font-size: 12px; color: var(--subtle); line-height: 1.45; margin-top: 10px; }
+  .picker { position: relative; }
+  .picker-btn {
+    width: 100%; height: 44px; display: flex; align-items: center; justify-content: space-between;
+    background: var(--sunken); border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: 0 12px; font-size: 14px;
+  }
+  .menu {
+    display: none; position: absolute; left: 0; right: 0; top: 50px; z-index: 20;
+    background: var(--elev); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  }
+  .menu.open { display: block; }
+  .menu-list { max-height: 240px; overflow: auto; }
+  .menu button.opt {
+    display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--fg);
+    padding: 10px 12px; font-size: 14px;
+  }
+  .menu button.opt small { display: block; color: var(--subtle); font-size: 11px; }
+  .menu button.opt:hover, .menu button.opt.on { background: var(--hover); }
+  .table-wrap { overflow-x: auto; margin: 0 -6px; }
+  table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  td { padding: 6px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); vertical-align: middle; height: 48px; }
+  tr.live td { background: var(--hover); }
+  .num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .idx { color: var(--muted); width: 28px; }
+  .odds-in {
+    width: 64px; height: 36px; background: var(--sunken); border: 1px solid var(--line);
+    color: var(--fg); border-radius: 6px; padding: 0 8px; font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .wl { display: flex; gap: 4px; min-width: 118px; }
+  .wl button {
+    flex: 1; height: 36px; border: 0; border-radius: 6px; font-size: 12px; font-weight: 600;
+  }
+  .wl .win { background: var(--win-dim); color: var(--win); }
+  .wl .loss { background: var(--loss-dim); color: var(--loss); }
+  .locked {
+    display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px;
+    border-radius: 6px; font-size: 12px; font-weight: 600; border: 0;
+  }
+  .locked.win { background: var(--win-dim); color: var(--win); }
+  .locked.loss { background: var(--loss-dim); color: var(--loss); }
+  .locked.last { cursor: pointer; }
+  .plans { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .plan {
+    display: flex; align-items: center; gap: 10px; padding: 12px;
+    background: var(--sunken); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .plan .meta { flex: 1; min-width: 0; }
+  .plan .n { font-family: Fraunces, serif; font-size: 15px; }
+  .plan .m { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .plan button { height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); font-size: 12px; }
+  .plan .del { color: var(--loss); border-color: color-mix(in srgb, var(--loss) 40%, var(--line)); }
+  .overlay {
+    display: none; position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 72%, transparent);
+    align-items: flex-end; justify-content: center;
+  }
+  .overlay.on { display: flex; }
+  .sheet {
+    width: 100%; max-width: 520px; background: var(--elev); border-radius: 18px 18px 0 0;
+    padding: 20px 18px calc(18px + var(--safe-bot)); border: 1px solid var(--line);
+  }
+  @media (min-width: 640px) {
+    .overlay { align-items: center; padding: 24px; }
+    .sheet { border-radius: 16px; }
+  }
+  .sheet h3 { font-family: Fraunces, serif; font-size: 22px; margin: 4px 0 8px; }
+  .dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--sunken); border-radius: 10px; padding: 12px; margin: 14px 0; }
+  .dl dt { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); }
+  .dl dd { margin: 4px 0 0; font-size: 14px; }
+  .toggle { display: flex; gap: 8px; margin-top: 4px; }
+  .toggle button { flex: 1; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--sunken); color: var(--muted); font-weight: 600; }
+  .toggle button.on.win { background: var(--win-dim); color: var(--win); border-color: transparent; }
+  .toggle button.on.loss { background: var(--loss-dim); color: var(--loss); border-color: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div>
+      <p class="eyebrow" id="greet">Masaniello</p>
+      <h1>Masaniello</h1>
+      <p class="sub">Private book. Integer stakes. Win and Lost lock after you confirm.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="head">
+      <h2>The book</h2>
+      <span class="pill" id="status-pill">Draft</span>
+    </div>
+    <label for="plan-name">Plan name</label>
+    <input id="plan-name" type="text" maxlength="48" placeholder="Weekend card, Serie A run" autocomplete="off">
+
+    <div style="height:12px"></div>
+    <label>Currency</label>
+    <div class="picker" id="cur-picker">
+      <button type="button" class="picker-btn" id="cur-btn">Eurozone · EUR €</button>
+      <div class="menu" id="cur-menu">
+        <div style="padding:8px;">
+          <input id="cur-q" type="search" placeholder="Search any country">
+        </div>
+        <div class="menu-list" id="cur-list"></div>
+      </div>
+    </div>
+    <p class="note">Search any country. Amounts stay in that currency.</p>
+
+    <div class="grid2" style="margin-top:12px;">
+      <div><label for="bankroll">Bankroll</label><input id="bankroll" type="number" min="1" step="10" value="1000"></div>
+      <div><label for="odds">Average odds</label><input id="odds" type="number" min="1.01" max="50" step="0.01" value="1.40"></div>
+      <div><label for="events">Events</label><input id="events" type="number" min="2" max="60" step="1" value="8"></div>
+      <div><label for="wins">Expected wins</label><input id="wins" type="number" min="1" max="60" step="1" value="5"></div>
+    </div>
+
+    <p class="eyebrow" style="margin-top:14px;">Presets</p>
+    <div class="presets" id="presets"></div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Locked yield</div><div class="v green" id="s-yield">—</div><div class="h" id="s-yield-h">If you land the wins</div></div>
+      <div class="stat"><div class="k">Target</div><div class="v" id="s-target">—</div><div class="h" id="s-errors"></div></div>
+      <div class="stat"><div class="k">First stake</div><div class="v" id="s-stake">—</div></div>
+      <div class="stat"><div class="k">To win / events</div><div class="v" id="s-ratio">5 / 8</div><div class="h" id="s-hit"></div></div>
+    </div>
+
+    <div style="height:14px"></div>
+    <button class="btn btn-primary" id="open-btn">Open the book</button>
+    <button class="btn btn-ghost" id="reset-btn" style="margin-top:8px;display:none;">New series</button>
+    <p class="err" id="setup-err"></p>
+    <button class="btn btn-ghost" id="save-btn" style="margin-top:8px;">Save this plan</button>
+    <p class="note" id="save-note">Named and stored on this Telegram account.</p>
+    <div class="plans" id="plans"></div>
+  </div>
+
+  <div class="card" id="ledger-card">
+    <div class="head">
+      <div>
+        <p class="eyebrow">Plan</p>
+        <h2 id="ledger-title">Untitled plan</h2>
+      </div>
+      <button class="btn btn-ghost" id="unlock-btn" style="width:auto;height:36px;padding:0 12px;display:none;">Unlock last</button>
+    </div>
+    <p class="note" style="margin:0 0 10px;">Win / Lost ask for a lock. Unlock last if you tapped the wrong one.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Odds</th><th>Result</th>
+            <th class="num">Stake</th><th class="num">Return</th><th class="num">Bankroll</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="note" style="text-align:center;">Bankroll arithmetic only. Never stake money you cannot afford to lose.</p>
+</div>
+
+<div class="overlay" id="lock-overlay">
+  <div class="sheet">
+    <p class="eyebrow" id="lock-kicker">Lock result</p>
+    <h3 id="lock-title">Lock #1 as Win?</h3>
+    <p class="note" id="lock-copy">After this, Win / Lost cannot be changed on that row. Unlock last is the only reverse if you picked the wrong result.</p>
+    <div class="toggle" id="lock-toggle">
+      <button type="button" class="win on" data-r="win">Win</button>
+      <button type="button" class="loss" data-r="loss">Lost</button>
+    </div>
+    <dl class="dl">
+      <div><dt>Row</dt><dd id="lock-event">#1</dd></div>
+      <div><dt>Result</dt><dd id="lock-result">Win</dd></div>
+      <div><dt>Odds</dt><dd id="lock-odds">1.40</dd></div>
+      <div><dt>Stake</dt><dd id="lock-stake">0</dd></div>
+    </dl>
+    <div class="row-btns">
+      <button class="btn btn-ghost" id="lock-cancel">Cancel</button>
+      <button class="btn btn-win" id="lock-ok">Lock Win</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    try { tg.enableClosingConfirmation(); } catch (e) {}
+  }
+  const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+  const useCloud = !!(tg && tg.CloudStorage);
+  const PREFIX = "mn2_";
+  const BOOK_KEY = PREFIX + "book";
+  const PLANS_KEY = PREFIX + "plans";
+
+  const CURRENCIES = [
+    ["EUR","Euro","Eurozone"],["EUR","Euro","Germany"],["EUR","Euro","France"],["EUR","Euro","Italy"],["EUR","Euro","Spain"],
+    ["EUR","Euro","Netherlands"],["EUR","Euro","Portugal"],["EUR","Euro","Ireland"],["EUR","Euro","Austria"],["EUR","Euro","Belgium"],
+    ["EUR","Euro","Finland"],["EUR","Euro","Greece"],["EUR","Euro","Croatia"],["GBP","Pound sterling","United Kingdom"],
+    ["CHF","Swiss franc","Switzerland"],["SEK","Swedish krona","Sweden"],["NOK","Norwegian krone","Norway"],["DKK","Danish krone","Denmark"],
+    ["PLN","Polish zloty","Poland"],["CZK","Czech koruna","Czechia"],["HUF","Hungarian forint","Hungary"],["RON","Romanian leu","Romania"],
+    ["TRY","Turkish lira","Turkey"],["UAH","Ukrainian hryvnia","Ukraine"],["USD","US dollar","United States"],["CAD","Canadian dollar","Canada"],
+    ["MXN","Mexican peso","Mexico"],["BRL","Brazilian real","Brazil"],["ARS","Argentine peso","Argentina"],["CLP","Chilean peso","Chile"],
+    ["COP","Colombian peso","Colombia"],["PEN","Peruvian sol","Peru"],["NGN","Nigerian naira","Nigeria"],["GHS","Ghanaian cedi","Ghana"],
+    ["KES","Kenyan shilling","Kenya"],["ZAR","South African rand","South Africa"],["EGP","Egyptian pound","Egypt"],["MAD","Moroccan dirham","Morocco"],
+    ["TND","Tunisian dinar","Tunisia"],["XOF","West African CFA franc","Senegal"],["XOF","West African CFA franc","Côte d'Ivoire"],
+    ["XOF","West African CFA franc","Ghana neighbors"],["UGX","Ugandan shilling","Uganda"],["TZS","Tanzanian shilling","Tanzania"],
+    ["ETB","Ethiopian birr","Ethiopia"],["INR","Indian rupee","India"],["PKR","Pakistani rupee","Pakistan"],["BDT","Bangladeshi taka","Bangladesh"],
+    ["JPY","Japanese yen","Japan"],["CNY","Chinese yuan","China"],["HKD","Hong Kong dollar","Hong Kong"],["KRW","South Korean won","South Korea"],
+    ["SGD","Singapore dollar","Singapore"],["MYR","Malaysian ringgit","Malaysia"],["IDR","Indonesian rupiah","Indonesia"],["THB","Thai baht","Thailand"],
+    ["VND","Vietnamese dong","Vietnam"],["PHP","Philippine peso","Philippines"],["AED","UAE dirham","United Arab Emirates"],["SAR","Saudi riyal","Saudi Arabia"],
+    ["QAR","Qatari riyal","Qatar"],["KWD","Kuwaiti dinar","Kuwait"],["ILS","Israeli shekel","Israel"],["AUD","Australian dollar","Australia"],
+    ["NZD","New Zealand dollar","New Zealand"],["NONE","No symbol","None"]
+  ];
+  const PRESETS = [
+    { id: "classic", label: "Classic", events: 8, expectedWins: 5, odds: 1.4 },
+    { id: "favorites", label: "Favorites", events: 10, expectedWins: 8, odds: 1.5 },
+    { id: "value", label: "Value", events: 12, expectedWins: 7, odds: 1.9 },
+    { id: "even", label: "Even money", events: 10, expectedWins: 7, odds: 2 }
+  ];
+
+  function symbolOf(code) {
+    try {
+      const parts = new Intl.NumberFormat("en", { style: "currency", currency: code, currencyDisplay: "narrowSymbol" }).formatToParts(0);
+      const p = parts.find(function (x) { return x.type === "currency"; });
+      if (p && p.value) return p.value;
+    } catch (e) {}
+    const fb = { EUR: "€", USD: "$", GBP: "£", NGN: "₦", JPY: "¥", CNY: "¥", INR: "₹", GHS: "₵", KES: "KSh", ZAR: "R", NONE: "" };
+    return fb[code] || code;
+  }
+  function money(n, code) {
+    if (!isFinite(n)) return "—";
+    const abs = Math.abs(Math.round(n));
+    const sign = n < 0 ? "−" : "";
+    const s = symbolOf(code);
+    if (!s) return sign + abs;
+    if (code === "USD" || code === "GBP") return sign + s + abs;
+    return sign + abs + " " + s;
+  }
+  function logChoose(n, k) {
+    if (k < 0 || k > n) return -Infinity;
+    const kk = Math.min(k, n - k);
+    let c = 0;
+    for (let i = 1; i <= kk; i++) c += Math.log(n - kk + i) - Math.log(i);
+    return c;
+  }
+  function binomPmf(n, i, p) {
+    if (i < 0 || i > n) return 0;
+    if (p <= 0) return i === 0 ? 1 : 0;
+    if (p >= 1) return i === n ? 1 : 0;
+    return Math.exp(logChoose(n, i) + i * Math.log(p) + (n - i) * Math.log(1 - p)) || 0;
+  }
+  function survival(k, n, p) {
+    if (k <= 0) return 1;
+    if (k > n) return 0;
+    let sum = 0;
+    if (n - k + 1 <= k) {
+      for (let i = k; i <= n; i++) sum += binomPmf(n, i, p);
+    } else {
+      for (let i = 0; i < k; i++) sum += binomPmf(n, i, p);
+      sum = 1 - sum;
+    }
+    return Math.min(1, Math.max(0, sum));
+  }
+  function yieldMul(eventsLeft, winsNeeded, odds) {
+    if (winsNeeded <= 0) return 1;
+    if (eventsLeft <= 0 || winsNeeded > eventsLeft || !(odds > 1)) return NaN;
+    const s = survival(winsNeeded, eventsLeft, 1 / odds);
+    if (s <= 0) return Infinity;
+    return 1 / s;
+  }
+  function computeStake(bankroll, eventsLeft, winsNeeded, odds) {
+    const empty = { ok: false, stake: 0, target: NaN, yield: NaN };
+    if (!(bankroll > 0) || !(odds > 1)) return empty;
+    if (winsNeeded <= 0) return { ok: true, stake: 0, target: bankroll, yield: 1 };
+    if (winsNeeded > eventsLeft) return empty;
+    const R = yieldMul(eventsLeft, winsNeeded, odds);
+    const R1 = yieldMul(eventsLeft - 1, winsNeeded - 1, odds);
+    if (!isFinite(R) || !isFinite(R1) || R1 <= 0) return empty;
+    let stake = bankroll * ((R - R1) / (R1 * (odds - 1)));
+    if (!isFinite(stake) || stake < 0) return empty;
+    if (stake > bankroll && stake - bankroll < bankroll * 1e-9) stake = bankroll;
+    if (stake > bankroll + 1e-9) return empty;
+    return { ok: true, stake: stake, target: bankroll * R, yield: R };
+  }
+  function integerStake(stake, bankroll) {
+    if (!(stake > 0) || !(bankroll > 0)) return 0;
+    let n = Math.round(stake);
+    if (n < 1) n = 1;
+    if (n > bankroll) n = Math.max(0, Math.floor(bankroll));
+    return n;
+  }
+
+  function storeSet(key, value) {
+    return new Promise(function (resolve) {
+      if (useCloud) {
+        try { tg.CloudStorage.setItem(key, value, function (err) { resolve(!err); }); }
+        catch (e) { resolve(false); }
+      } else {
+        try { localStorage.setItem(key, value); resolve(true); } catch (e) { resolve(false); }
+  
